@@ -4,7 +4,7 @@
 ##
 
 #   the used tools
-APXS=/usr/sbin/apxs
+APXS=/usr/local/sbin/apxs
 APACHECTL=apachectl
 
 #   additional user defines, includes and libraries
@@ -13,20 +13,20 @@ APACHECTL=apachectl
 #LIB=-Lmy/lib/dir -lmylib
 
 #   the default target
-all: mod_dosdetector.so
+all: mod_dosdetector_syslog.so
 
 #   compile the DSO file
-mod_dosdetector.so: mod_dosdetector.c
-	$(APXS) -c $(DEF) $(INC) $(LIB) mod_dosdetector.c
+mod_dosdetector_syslog.so: mod_dosdetector_syslog.c
+	$(APXS) -c $(DEF) $(INC) $(LIB) mod_dosdetector_syslog.c
 
 #   install the DSO file into the Apache installation
 #   and activate it in the Apache configuration
 install: all
-	$(APXS) -c -i -a -n 'dosdetector' mod_dosdetector.c
+	$(APXS) -c -i -a -n 'dosdetector_syslog' mod_dosdetector_syslog.c
 
 #   cleanup
 clean:
-	-rm -f mod_dosdetector.o mod_dosdetector.so mod_dosdetector.lo mod_dosdetector.slo mod_dosdetector.la
+	-rm -f mod_dosdetector_syslog.o mod_dosdetector_syslog.so mod_dosdetector_syslog.lo mod_dosdetector_syslog.slo mod_dosdetector_syslog.la
 
 #   simple test
 test: reload
