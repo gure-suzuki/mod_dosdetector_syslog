@@ -208,7 +208,8 @@ DoSBanPeriod     40
 
 > 元々の処理では10秒毎にカウンターが0に戻り、SuspectHardDoSの判定は永遠にされない形となります。
 
-DoSDetectionでプロセス環境変数を取れるようにしました。
+DoSDetectionでプロセス環境変数を取れるようにしました
+----------------------------------------------------
 
 ```
 SetEnvIf Remote_Addr "^192\.168\." nochk
@@ -400,7 +401,7 @@ Jun  9 08:07:14 My-HOST httpd[7661]: dosdetector: suspected as DoS attack! [vhos
 DoSHLogSelector [string] default: none
 <Description> Name of syslog's selector for reporting `SuspectHardDoS' is set
 <Context> server config, virtual host
-For example: DoSHLogSelector "security.crit"      - Going to report to "security.crit"
+For example: DoSHLogSelector "security.crit"   - Going to report to "security.crit"
 ```
 
 ```
@@ -426,4 +427,3 @@ RewriteCond %{ENV:SuspectHardDoS} =1
 RewriteRule .*  - [R=503,L]
 </IfModule>
 ```
-
