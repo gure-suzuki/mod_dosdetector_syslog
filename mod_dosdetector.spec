@@ -54,6 +54,6 @@ cp .libs/mod_dosdetector_syslog.so %{buildroot}%{_libdir}/httpd/modules/
 #%doc README INSTALL *.html
 
 %changelog
-* Fri Jan 19 2007  <stanaka@inco.hatena.com> - 0.1-1
+* Tue Jun 12 2018  <gure@kasugasoft.daiwadaw.jp> - 0.2
 - Initial release.
 
