@@ -51,9 +51,11 @@
 
 #if HTTP_VERSION(AP_SERVER_MAJORVERSION_NUMBER, AP_SERVER_MINORVERSION_NUMBER) >= 2004
     static const char *DefaultContentType = "application/octet-stream";
+#   define SERVER_CONF ap_server_conf
 #   define LOG_MODULENAME
     APLOG_USE_MODULE(dosdetector_syslog);
 #else
+#   define SERVER_CONF NULL
 #   define LOG_MODULENAME "dosdetector_syslog: "
 #endif
 
@@ -62,14 +64,14 @@
 
 #ifdef _DEBUG
 #   define DEBUGLOG(...) ap_log_error(APLOG_MARK, \
-                             APLOG_NOERRNO|APLOG_NOTICE, 0, ap_server_conf, \
+                             APLOG_NOERRNO|APLOG_NOTICE, 0, SERVER_CONF, \
                              LOG_MODULENAME __VA_ARGS__)
 #else
 #   define DEBUGLOG(...) //
 #endif
 
 #define TRACELOG(...) ap_log_error(APLOG_MARK, \
-                          APLOG_NOERRNO|APLOG_NOTICE, 0, ap_server_conf, \
+                          APLOG_NOERRNO|APLOG_NOTICE, 0, SERVER_CONF, \
                           LOG_MODULENAME __VA_ARGS__)
 
 #define MUTEX_LOCK(m,s) if ((rc = apr_global_mutex_lock(m)) != APR_SUCCESS) \
@@ -206,7 +208,12 @@ static apr_status_t create_mutex(server_rec *s, apr_pool_t *p)
     }
 
 #ifdef AP_NEED_SET_MUTEX_PERMS
+#   if HTTP_VERSION(AP_SERVER_MAJORVERSION_NUMBER, AP_SERVER_MINORVERSION_NUMBER) >= 2004
     rc = ap_unixd_set_global_mutex_perms(cfg->lock);
+#   else
+    rc = unixd_set_global_mutex_perms(cfg->lock);
+#   endif
+
     if (rc != APR_SUCCESS) {
         ap_log_error(APLOG_MARK, APLOG_ERR, rc, s, LOG_MODULENAME "could not set permission on mutex");
         return rc;
@@ -447,7 +454,13 @@ static const char *get_address(request_rec *r, int is_forwarded)
                 }
             }
             if (!inet_aton(address, &v4) && !inet_pton(AF_INET6, address, &v6)) {
+#if HTTP_VERSION(AP_SERVER_MAJORVERSION_NUMBER, AP_SERVER_MINORVERSION_NUMBER) >= 2004
                 TRACELOG("`%s' is not a valid IP address, so used `%s'", address, r->useragent_ip);
+#else
+                TRACELOG("`%s' is not a valid IP address, so used `%s'", address, r->connection->remote_ip);
+#endif
+
+
                 address = NULL;
             }
         }
