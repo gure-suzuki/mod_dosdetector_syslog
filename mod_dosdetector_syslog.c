@@ -460,7 +460,6 @@ static const char *get_address(request_rec *r, int is_forwarded)
                 TRACELOG("`%s' is not a valid IP address, so used `%s'", address, r->connection->remote_ip);
 #endif
 
-
                 address = NULL;
             }
         }
