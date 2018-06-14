@@ -369,7 +369,7 @@ For example: DoSForwardedCount 0   - In the case of `X-Forwarded-For: 198.51.100
 
 
 ```
-DoSForwardedHeader [string...] default: none
+DoSForwardedHeader [none|string...] default: none
 <Description> Names of custom header to override forwarded-header
 <Context> server config, virtual host
 For example: DoSForwardedHeader X-Real-IP                        - Using `X-Real-IP' instead of `X-Forwarded-For'
@@ -378,7 +378,7 @@ For example: DoSForwardedHeader X-Real-IP                        - Using `X-Real
 
 
 ```
-DoSIgnoreContentType [regex...] default: none
+DoSIgnoreContentType [none|regex...] default: none
 <Description> Name of content-types for exclude from download counts
 <Context> server config, virtual host, directory, .htaccess
 <Override> FileInfo
@@ -386,10 +386,10 @@ For example: DoSIgnoreContentType ^(image/|text/) - Ignoring image/* and text/* 
 ```
 
 ```
-DoSSLogSelector [string] default: none
+DoSSLogSelector [none|string] default: none
 <Description> Name of syslog's selector for reporting `SuspectDoS' is set
 <Context> server config, virtual host
-For example: DoSSLogSelector "security.info"   - Going to report to "security.info"
+For example: DoSSLogSelector "security.info"   - Going to report to "security.info" only once
 ```
 
 ```
@@ -398,10 +398,10 @@ Jun  9 08:07:14 My-HOST httpd[7661]: dosdetector: suspected as DoS attack! [vhos
 
 
 ```
-DoSHLogSelector [string] default: none
+DoSHLogSelector [none|string] default: none
 <Description> Name of syslog's selector for reporting `SuspectHardDoS' is set
 <Context> server config, virtual host
-For example: DoSHLogSelector "security.crit"   - Going to report to "security.crit"
+For example: DoSHLogSelector "security.crit"   - Going to report to "security.crit" every over DoSBanThreshold
 ```
 
 ```
