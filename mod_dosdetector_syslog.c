@@ -45,6 +45,7 @@
 #include "apr_shm.h"
 #include "apr_global_mutex.h"
 #include "apr_sha1.h"
+#include "apr_date.h"
 #ifdef AP_NEED_SET_MUTEX_PERMS
 #   include "unixd.h"
 #endif
@@ -474,6 +475,20 @@ static const char *get_address(request_rec *r, int is_forwarded)
     return address;
 }
 
+static int content_is_not_modified(request_rec *r)
+{
+    if (r->finfo.fname == NULL) return FALSE;
+
+    const char *em, *es, *nm, *ms;
+    em  = apr_psprintf(r->pool, "%" APR_UINT64_T_HEX_FMT, r->finfo.mtime);
+    es  = apr_psprintf(r->pool, "\"%" APR_UINT64_T_HEX_FMT "\"", r->finfo.size);
+    nm  = apr_table_get(r->headers_in, "If-None-Match");
+    ms  = apr_table_get(r->headers_in, "If-Modified-Since");
+
+    return (nm != NULL && (ap_strstr_c(nm, em) || !ap_strcmp_match(nm, es)))
+        || (ms != NULL && apr_time_sec(r->finfo.mtime) <= apr_time_sec(apr_date_parse_http(ms)));
+}
+
 static int dosdetector_setenv(request_rec *r)
 {
     dosdetector_dir_config *cfg = (dosdetector_dir_config *) ap_get_module_config(r->per_dir_config, &dosdetector_syslog_module);
@@ -505,6 +520,7 @@ static int dosdetector_setenv(request_rec *r)
 
     return DECLINED;
 }
+
 static int dosdetector_handler(request_rec *r)
 {
     //DEBUGLOG("dosdetector_handler is called");
@@ -512,14 +528,13 @@ static int dosdetector_handler(request_rec *r)
     dosdetector_dir_config *cfg = (dosdetector_dir_config *) ap_get_module_config(r->per_dir_config, &dosdetector_syslog_module);
     dosdetector_server_config *cfgs = (dosdetector_server_config *) ap_get_module_config(r->server->module_config, &dosdetector_syslog_module);
 
+    if (!ap_is_initial_req(r)) return DECLINED;
     if (cfg->illegal_settings) {
         ap_log_error(APLOG_MARK, APLOG_ERR, 0, r->server, LOG_MODULENAME "DoS* is not allowed in `%s'", cfg->path);
         return HTTP_INTERNAL_SERVER_ERROR;
     }
     if (cfg->detection == NULL || !ap_strcasecmp_match("off", cfg->detection))
         return DECLINED;
-    if (!ap_is_initial_req(r)) return DECLINED;
-    if (r->status == HTTP_NOT_MODIFIED) return DECLINED;
 
     if (ap_strcasecmp_match("on", cfg->detection)){
         int rev = (cfg->detection[0] == '!') ? 1 : 0;
@@ -530,6 +545,7 @@ static int dosdetector_handler(request_rec *r)
          * Set to `DoSDetection !var' and then ${var} is not defined, it follows `on'.
          */
     }
+    if (content_is_not_modified(r)) return DECLINED;
 
     const char *content_type = NULL;
     int i;
@@ -1010,7 +1026,7 @@ static void register_hooks(apr_pool_t *p)
 
     ap_hook_header_parser(dosdetector_handler, pre_handler, NULL, APR_HOOK_MIDDLE);
     //ap_hook_fixups(dosdetector_handler, pre_handler, NULL, APR_HOOK_MIDDLE);
-    //ap_hook_handler(dosdetector_handler,NULL,NULL,APR_HOOK_FIRST);
+    //ap_hook_handler(dosdetector_handler, NULL, NULL, APR_HOOK_FIRST);
     ap_hook_post_read_request(dosdetector_setenv, NULL, post_setenv, APR_HOOK_MIDDLE);
     ap_hook_post_config(initialize_module, NULL, NULL, APR_HOOK_MIDDLE);
     ap_hook_child_init(initialize_child, NULL, NULL, APR_HOOK_MIDDLE);
