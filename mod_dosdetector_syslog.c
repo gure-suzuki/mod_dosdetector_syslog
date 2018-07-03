@@ -477,7 +477,8 @@ static const char *get_address(request_rec *r, int is_forwarded)
 
 static int content_is_not_modified(request_rec *r)
 {
-    if (r->finfo.fname == NULL) return FALSE;
+    if (r->finfo.fname == NULL
+        || r->method_number != M_GET) return FALSE;
 
     const char *em, *es, *nm, *ms;
     em  = apr_psprintf(r->pool, "%" APR_UINT64_T_HEX_FMT, r->finfo.mtime);
