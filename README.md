@@ -1,6 +1,6 @@
 mod_dosdetector_syslog
 ===============
-このリポジトリはShinji Tanaka氏が制作されたApacheモジュール「[mod_dosdetector](https://github.com/stanaka/mod_dosdetector "mod_dosdetector - An apache module for detecting DoS attacks. When detecting DoS attacks, this module set environment variables. Note that this module itself does not affect the response.")」をforkさせて頂き、
+このリポジトリはShinji Tanaka氏が制作されたApacheモジュール「mod_dosdetector」をforkさせて頂き、
 個人的な好みでいくつかの機能を加えた私家版になります。ご需要に適いましたら、よろしければご利用くださいませ。
 またこちらのリポジトリに関してのご質問は<gure@kasugasoft.daiwadaw.jp>まで
 ご連絡頂けますと幸いです。
