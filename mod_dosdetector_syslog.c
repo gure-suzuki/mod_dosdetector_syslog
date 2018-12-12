@@ -480,13 +480,15 @@ static int content_is_not_modified(request_rec *r)
     if (r->finfo.fname == NULL
         || r->method_number != M_GET) return FALSE;
 
-    const char *em, *es, *nm, *ms;
+    const char *em, *es, *gz, *nm, *ms;
     em  = apr_psprintf(r->pool, "%" APR_UINT64_T_HEX_FMT, r->finfo.mtime);
     es  = apr_psprintf(r->pool, "\"%" APR_UINT64_T_HEX_FMT "\"", r->finfo.size);
+    gz  = apr_psprintf(r->pool, "\"%" APR_UINT64_T_HEX_FMT "-gzip\"", r->finfo.size);
     nm  = apr_table_get(r->headers_in, "If-None-Match");
     ms  = apr_table_get(r->headers_in, "If-Modified-Since");
 
-    return (nm != NULL && (ap_strstr_c(nm, em) || !ap_strcmp_match(nm, es)))
+    return (nm != NULL && (ap_strstr_c(nm, em) || !ap_strcmp_match(nm, es)
+        || !ap_strcmp_match(nm, gz)))
         || (ms != NULL && apr_time_sec(r->finfo.mtime) <= apr_time_sec(apr_date_parse_http(ms)));
 }
 
