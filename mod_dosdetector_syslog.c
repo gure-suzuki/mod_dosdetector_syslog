@@ -279,14 +279,16 @@ static client_t *get_client(apr_pool_t *p, client_list_t *client_list, const cha
     index->next = client_list->head;
     client_list->head = index;
 
-    index->last = now;
     if(is_empty || ap_strcmp_match(index->addr, clientip)){
         index->count = 0;
         index->suspected = 0;
         index->hard_suspected = 0;
         index->ban_period = 0;
         apr_cpystrn(index->addr, clientip, sizeof(index->addr));
+    } else if(!index->suspected && index->last + period < now){
+        index->count = 0;
     }
+    index->last = now;
 
     return index;
 }
@@ -613,7 +615,7 @@ static int dosdetector_handler(request_rec *r)
     if(client->suspected > 0 && client->suspected + cfg->ban_period > now){
         DEBUGLOG("'%s' has been still suspected as DoS attack! (suspected %d sec ago)", address, now - client->suspected);
 
-        if(client->hard_suspected > 0 || client->count > cfg->ban_threshold){
+        if(client->hard_suspected > 0 || client->count >= cfg->ban_threshold){
             TRACELOG("'%s' is suspected as Hard DoS attack! (counter: %d)", address, client->count);
             if((client->hard_suspected % cfg->ban_threshold) == 0) {
                 apr_table_setn(r->subprocess_env, "SuspectHardDoS", "1");
@@ -638,7 +640,7 @@ static int dosdetector_handler(request_rec *r)
             client->count = 0;
         }
 
-        if(client->count > cfg->threshold){
+        if(client->count >= cfg->threshold){
             client->suspected = now;
             apr_table_setn(r->subprocess_env, "SuspectDoS", "1");
             TRACELOG("'%s' is suspected as DoS attack! (counter: %d)", address, client->count);
