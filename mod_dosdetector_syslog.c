@@ -637,7 +637,7 @@ static int dosdetector_handler(request_rec *r)
         if(client->suspected > 0){
             client->suspected = 0;
             client->hard_suspected = 0;
-            client->count = 0;
+            client->count = 1;
         }
 
         if(client->count >= cfg->threshold){
