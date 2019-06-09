@@ -89,7 +89,7 @@
 
 #define DEFAULT_THRESHOLD 10000
 #define DEFAULT_PERIOD 10
-#define DEFAULT_BAN_PERIOD 300
+#define DEFAULT_BAN_PERIOD 1
 #define DEFAULT_TABLE_SIZE 100
 
 module AP_MODULE_DECLARE_DATA dosdetector_syslog_module;
