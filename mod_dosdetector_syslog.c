@@ -491,7 +491,7 @@ static int content_is_not_modified(request_rec *r)
 
     return (nm != NULL && (ap_strstr_c(nm, em) || !ap_strcmp_match(nm, es)
         || !ap_strcmp_match(nm, gz)))
-        || (ms != NULL && apr_time_sec(r->finfo.mtime) <= apr_time_sec(apr_date_parse_http(ms)));
+        || (ms != NULL && apr_time_sec(r->finfo.mtime) >= apr_time_sec(apr_date_parse_http(ms)));
 }
 
 static int dosdetector_setenv(request_rec *r)
