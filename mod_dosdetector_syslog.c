@@ -518,12 +518,10 @@ static int dosdetector_setenv(request_rec *r)
 
     time_t now = time((time_t *) 0);
 
-    if (index->suspected + index->ban_period > now) {
-        if (index->suspected > 0)
-            apr_table_setn(r->subprocess_env, "SuspectDoS", "1");
-        if (index->hard_suspected > 0)
-            apr_table_setn(r->subprocess_env, "SuspectHardDoS", "1");
-    }
+    if (index->suspected > 0)
+        apr_table_setn(r->subprocess_env, "SuspectDoS", "1");
+    if (index->hard_suspected > 0)
+        apr_table_setn(r->subprocess_env, "SuspectHardDoS", "1");
 
     return DECLINED;
 }
