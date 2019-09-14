@@ -448,8 +448,8 @@ static const char *get_address(request_rec *r, int is_forwarded)
                 address = apr_pstrdup(r->pool, address_tmp);
 
                 i = cfg->forwarded_count;
-                while ((address_split = ap_strrchr(address, ','))
-                        && (i-- >= 0)) {
+                while ((i-- >= 0)
+                       && (address_split = ap_strrchr(address, ','))) {
                     *address_split = '\0';
                 }
                 if (address_split != NULL) {
