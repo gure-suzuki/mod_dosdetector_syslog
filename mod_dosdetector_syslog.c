@@ -688,8 +688,6 @@ static int dosdetector_handler(request_rec *r)
 static const char *set_detection_config(cmd_parms *parms, void *mconfig, const char *arg)
 {
     DEBUGLOG("detection_config is called");
-    dosdetector_server_config *cfgs = (dosdetector_server_config *)
-        ap_get_module_config(parms->server->module_config, &dosdetector_syslog_module);
     dosdetector_dir_config *cfg = (dosdetector_dir_config *) mconfig;
     if (*arg == '!' && *(arg + 1) == '\0')
         return "Invalid argument";
