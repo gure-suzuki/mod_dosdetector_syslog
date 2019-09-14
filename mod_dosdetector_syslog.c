@@ -507,6 +507,8 @@ static int dosdetector_setenv(request_rec *r)
     int is_empty = 0;
     apr_status_t rc;
 
+    apr_table_setn(r->subprocess_env, "X-DoSTranslated-IP", address);
+
     MUTEX_LOCK(cfgs->lock, r->server);
     client_list = apr_shm_baseaddr_get(cfgs->shm);
     for(index = client_list->head; index != (client_t *) 0; index = index->next){
