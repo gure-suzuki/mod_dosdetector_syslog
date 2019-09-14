@@ -285,7 +285,7 @@ static client_t *get_client(apr_pool_t *p, client_list_t *client_list, const cha
         index->hard_suspected = 0;
         index->ban_period = 0;
         apr_cpystrn(index->addr, clientip, sizeof(index->addr));
-    } else if(!index->suspected && index->last + period < now){
+    } else if(!index->suspected && index->last + period <= now){
         index->count = 0;
     }
     index->last = now;
