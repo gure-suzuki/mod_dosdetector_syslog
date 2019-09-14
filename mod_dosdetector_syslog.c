@@ -124,8 +124,6 @@ typedef struct {
     signed int period_set;
     signed int ban_period;
     signed int ban_period_set;
-    signed int forwarded;
-    signed int forwarded_set;
     signed int allow_reconfig;
     signed int allow_reconfig_set;
     signed int ignore_contenttype_set;
@@ -140,6 +138,8 @@ typedef struct {
 typedef struct {
     long        table_size;
     signed int  table_size_set;
+    signed int  forwarded;
+    signed int  forwarded_set;
     signed int  forwarded_header_set;
     signed int  forwarded_count;
     signed int  forwarded_count_set;
@@ -323,6 +323,8 @@ static void *dosdetector_merge_server_config(apr_pool_t *p, void *basev, void *o
     cfg->slog_selector_set    = base->slog_selector_set || overrides->slog_selector_set;
     cfg->hlog_selector        = (overrides->hlog_selector_set == 0) ? base->hlog_selector : overrides->hlog_selector;
     cfg->hlog_selector_set    = base->hlog_selector_set || overrides->hlog_selector_set;
+    cfg->forwarded            = (overrides->forwarded_set == 0) ? base->forwarded : overrides->forwarded;
+    cfg->forwarded_set        = base->forwarded_set || overrides->forwarded_set;
     cfg->forwarded_header     = (overrides->forwarded_header_set == 0) ? base->forwarded_header : overrides->forwarded_header;
     cfg->forwarded_header_set = base->forwarded_header_set || overrides->forwarded_header_set;
     cfg->forwarded_count      = (overrides->forwarded_count_set == 0) ? base->forwarded_count : overrides->forwarded_count;
@@ -376,8 +378,6 @@ static void *dosdetector_merge_dir_config(apr_pool_t *p, void *basev, void *over
     cfg->period_set             = base->period_set || overrides->period_set;
     cfg->ban_period             = (overrides->ban_period_set == 0 && overrides->ban_period < base->ban_period) ? base->ban_period : overrides->ban_period;
     cfg->ban_period_set         = base->ban_period_set || overrides->ban_period_set;
-    cfg->forwarded              = (overrides->forwarded_set == 0) ? base->forwarded : overrides->forwarded;
-    cfg->forwarded_set          = base->forwarded_set || overrides->forwarded_set;
     cfg->allow_reconfig         = (overrides->allow_reconfig_set == 0) ? base->allow_reconfig : overrides->allow_reconfig;
     cfg->allow_reconfig_set     = base->allow_reconfig_set || overrides->allow_reconfig_set;
 
@@ -501,7 +501,7 @@ static int dosdetector_setenv(request_rec *r)
     dosdetector_dir_config *cfg = (dosdetector_dir_config *) ap_get_module_config(r->per_dir_config, &dosdetector_syslog_module);
     dosdetector_server_config *cfgs = (dosdetector_server_config *) ap_get_module_config(r->server->module_config, &dosdetector_syslog_module);
 
-    const char *address = get_address(r, cfg->forwarded);
+    const char *address = get_address(r, cfgs->forwarded);
     client_list_t *client_list;
     client_t *index;
     int is_empty = 0;
@@ -534,9 +534,9 @@ static int dosdetector_handler(request_rec *r)
     dosdetector_server_config *cfgs = (dosdetector_server_config *) ap_get_module_config(r->server->module_config, &dosdetector_syslog_module);
 
 #if HTTP_VERSION(AP_SERVER_MAJORVERSION_NUMBER, AP_SERVER_MINORVERSION_NUMBER) >= 2004
-    DEBUGLOG("processing from %s [%s]", r->useragent_ip, get_address(r, cfg->forwarded));
+    DEBUGLOG("processing from %s [%s]", r->useragent_ip, get_address(r, cfgs->forwarded));
 #else
-    DEBUGLOG("processing from %s [%s]", r->connection->remote_ip, get_address(r, cfg->forwarded));
+    DEBUGLOG("processing from %s [%s]", r->connection->remote_ip, get_address(r, cfgs->forwarded));
 #endif
 
     DEBUGLOG("processing path -> `%s' => configured in [%s]", r->finfo.fname ? r->finfo.fname : "(null)", cfg->path ? cfg->path : "(per-server)");
@@ -616,7 +616,7 @@ static int dosdetector_handler(request_rec *r)
     DEBUGLOG("processing content-type: %s", content_type);
 #endif
 
-    const char *address = get_address(r, cfg->forwarded);
+    const char *address = get_address(r, cfgs->forwarded);
     time_t now = time((time_t *) 0);
     apr_status_t rc;
 
@@ -773,7 +773,8 @@ static const char *set_table_size_config(cmd_parms *parms, void *mconfig, const 
 
 static const char *set_forwarded_config(cmd_parms *parms, void *mconfig, int on)
 {
-    dosdetector_dir_config *cfg = (dosdetector_dir_config *) mconfig;
+    dosdetector_server_config *cfg = (dosdetector_server_config *)
+        ap_get_module_config(parms->server->module_config, &dosdetector_syslog_module);
 
     cfg->forwarded = on;
     cfg->forwarded_set = 1;
@@ -928,7 +929,7 @@ static command_rec dosdetector_cmds[] = {
      "The name of shared memory to allocate for keeping track of clients"),
     AP_INIT_TAKE1("DoSTableSize", set_table_size_config, NULL, RSRC_CONF,
      "The size of table for tracking clients"),
-    AP_INIT_FLAG("DoSForwarded", set_forwarded_config, NULL, OR_FILEINFO,
+    AP_INIT_FLAG("DoSForwarded", set_forwarded_config, NULL, RSRC_CONF,
      "Use X-Forwarded-For header for Remote Address"),
     AP_INIT_TAKE1("DoSForwardedCount", set_forwarded_count_config, NULL, RSRC_CONF,
      "The count of back steps in X-Forwarded-For for assign Remote Address, "
