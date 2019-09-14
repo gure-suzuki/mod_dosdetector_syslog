@@ -216,6 +216,19 @@ DoSDetection !nochk
 
 等と設定されますと、指定されたアクセスに対してDoSDetectionをoffに設定出来ます。
 
+拡張フィールドから取得したIPアドレスを環境変数に出力するようにしました
+----------------------------------------------------
+以下のようにSetEnvIf等から参照することが出来ます。
+
+```
+DoSForwarded on
+DoSForwardedHeader X-Real-IP
+DoSForwardedCount 3
+SetEnvIf X-DoSTranslated-IP "^198\.51\." nochk
+DoSDetection !nochk
+```
+> 【注釈】指定された拡張フィールドからIPアドレスを取得出来ない場合、代わりにリモートIPアドレスが参照されます。
+
 DoSBanPeriodは常に一番大きな値を採るようにしました
 ----------------------------------------------------
 ディレクトリ毎にDoSBanPeriodを設定すると、例えばこれが100の場所でSuspectDoSと判定された時に  
