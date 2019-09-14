@@ -356,7 +356,7 @@ For example: DoSTableSize 300      - Create table with capable of store 300 IPs
 ```
 DoSForwarded [on|off] default: off
 <Description> Extract IP address from defined header using DoSForwardedHeader or `X-Forwarded-For'
-<Context> server config, virtual host, directory, .htaccess
+<Context> server config, virtual host
 <Override> FileInfo
 For example: DoSForwarded on       - enable
 ```
