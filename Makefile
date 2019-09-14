@@ -26,7 +26,8 @@ install: all
 
 #   cleanup
 clean:
-	-rm -f mod_dosdetector_syslog.o mod_dosdetector_syslog.so mod_dosdetector_syslog.lo mod_dosdetector_syslog.slo mod_dosdetector_syslog.la
+	-rm -f mod_dosdetector_syslog.o mod_dosdetector_syslog.so mod_dosdetector_syslog.lo mod_dosdetector_syslog.slo mod_dosdetector_syslog.la .libs/mod_dosdetector_syslog.a .libs/mod_dosdetector_syslog.o .libs/mod_dosdetector_syslog.la .libs/mod_dosdetector_syslog.so .libs/mod_dosdetector_syslog.lai
+	-rmdir .libs
 
 #   simple test
 test: reload
