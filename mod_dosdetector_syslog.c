@@ -424,12 +424,14 @@ static const char *get_address(request_rec *r, int is_forwarded)
 
             address = address_tmp;
 
+            DEBUGLOG("X-Forwarded-For: [%s]", address);
         } else if (is_empty == FALSE) {
             for (i = 0; i < cfg->forwarded_header->nelts; i++) {
                 if ((address_tmp = apr_table_get(r->headers_in, APR_ARRAY_IDX(cfg->forwarded_header, i, char *)))){
 
                     address = address_tmp;
 
+                    DEBUGLOG("%s: [%s]", ((char **)(cfg->forwarded_header)->elts)[i], address);
                     break;
                 }
                 //ap_log_error(APLOG_MARK, APLOG_ERR, 0, r->server, LOG_MODULENAME "name: %s", ((char **)(cfg->forwarded_header)->elts)[i]);
@@ -533,24 +535,51 @@ static int dosdetector_handler(request_rec *r)
     dosdetector_dir_config *cfg = (dosdetector_dir_config *) ap_get_module_config(r->per_dir_config, &dosdetector_syslog_module);
     dosdetector_server_config *cfgs = (dosdetector_server_config *) ap_get_module_config(r->server->module_config, &dosdetector_syslog_module);
 
-    if (!ap_is_initial_req(r)) return DECLINED;
+#if HTTP_VERSION(AP_SERVER_MAJORVERSION_NUMBER, AP_SERVER_MINORVERSION_NUMBER) >= 2004
+    DEBUGLOG("processing from %s [%s]", r->useragent_ip, get_address(r, cfg->forwarded));
+#else
+    DEBUGLOG("processing from %s [%s]", r->connection->remote_ip, get_address(r, cfg->forwarded));
+#endif
+
+    DEBUGLOG("processing path -> `%s' => configured in [%s]", r->finfo.fname ? r->finfo.fname : "(null)", cfg->path ? cfg->path : "(per-server)");
+
+    if (!ap_is_initial_req(r)) {
+        DEBUGLOG("skip processing, this request is sub-request");
+        return DECLINED;
+    }
+
+    if (!cfg || !cfgs || !cfgs->shm || !cfgs->lock) {
+        DEBUGLOG("skip processing, this module is not ready");
+        return DECLINED;
+    }
     if (cfg->illegal_settings) {
         ap_log_error(APLOG_MARK, APLOG_ERR, 0, r->server, LOG_MODULENAME "DoS* is not allowed in `%s'", cfg->path);
         return HTTP_INTERNAL_SERVER_ERROR;
     }
-    if (cfg->detection == NULL || !ap_strcasecmp_match("off", cfg->detection))
+    if (cfg->detection == NULL || !ap_strcasecmp_match("off", cfg->detection)) {
+        DEBUGLOG("skip processing, `DoSDetection' is not defined or `off'");
         return DECLINED;
+    }
 
     if (ap_strcasecmp_match("on", cfg->detection)){
         int rev = (cfg->detection[0] == '!') ? 1 : 0;
         const char *env = apr_table_get(r->subprocess_env, cfg->detection+rev);
-        if (rev == 0 && env == NULL) return DECLINED;
-        if (rev == 1 && env != NULL) return DECLINED;
+        if (rev == 0 && env == NULL) {
+            DEBUGLOG("skip processing, `%s' is not defined", cfg->detection);
+            return DECLINED;
+        }
+        if (rev == 1 && env != NULL) {
+            DEBUGLOG("skip processing, `%s' is defined", cfg->detection + 1);
+            return DECLINED;
+        }
         /*
          * Set to `DoSDetection !var' and then ${var} is not defined, it follows `on'.
          */
     }
-    if (content_is_not_modified(r)) return DECLINED;
+    if (content_is_not_modified(r)) {
+        DEBUGLOG("skip processing, content is not modified");
+        return DECLINED;
+    }
 
     const char *content_type = NULL;
     int i;
@@ -565,6 +594,7 @@ static int dosdetector_handler(request_rec *r)
             content_type = ap_default_type(r);
 #endif
         }
+        DEBUGLOG("detecting content-type: %s", content_type);
 
         ap_regmatch_t regmatch[AP_MAX_REG_MATCH];
         ap_regex_t **contenttype_regexp = (ap_regex_t **) cfg->contenttype_regexp->elts;
@@ -595,6 +625,11 @@ static int dosdetector_handler(request_rec *r)
     MUTEX_LOCK(cfgs->lock, r->server);
     client_list_t *client_list = apr_shm_baseaddr_get(cfgs->shm);
     client_t *client = get_client(r->pool, client_list, address, cfg->period, now);
+
+#ifdef _DEBUG
+    int last_count = client->count;
+#endif
+
     client->count ++;
     if (client->count == 0) client->count = -1;
     MUTEX_UNLOCK(cfgs->lock, r->server);
@@ -605,15 +640,8 @@ static int dosdetector_handler(request_rec *r)
         client->ban_period = cfg->ban_period;
     }
 
-#ifdef _DEBUG
-    int last_count = client->count;
-#endif
-
-    DEBUGLOG("%s, count: %d -> %d, period: %d, ban_period: %d, threshold: %d, ban_threshold: %d, server: %s", address,
-            last_count, client->count, cfg->period, cfg->ban_period, cfg->threshold, cfg->ban_threshold, r->server->server_hostname);
-
     if(client->suspected > 0 && client->suspected + cfg->ban_period > now){
-        DEBUGLOG("'%s' has been still suspected as DoS attack! (suspected %d sec ago)", address, now - client->suspected);
+        DEBUGLOG("'%s' has been still suspected as DoS attack! (suspected %d sec ago)", address, (int)(now - client->suspected));
 
         if(client->hard_suspected > 0 || client->count >= cfg->ban_threshold){
             TRACELOG("'%s' is suspected as Hard DoS attack! (counter: %d)", address, client->count);
@@ -653,6 +681,9 @@ static int dosdetector_handler(request_rec *r)
         }
     }
 
+    DEBUGLOG("%s, count: %d -> %d, period: %d, ban_period: %d, threshold: %d, ban_threshold: %d, server: %s", address,
+            last_count, client->count, cfg->period, cfg->ban_period, cfg->threshold, cfg->ban_threshold, r->server->server_hostname);
+
     return DECLINED;
 }
 
@@ -662,7 +693,7 @@ static const char *set_detection_config(cmd_parms *parms, void *mconfig, const c
     dosdetector_server_config *cfgs = (dosdetector_server_config *)
         ap_get_module_config(parms->server->module_config, &dosdetector_syslog_module);
     dosdetector_dir_config *cfg = (dosdetector_dir_config *) mconfig;
-    if (*arg == '!' && *(arg+1) == '\0')
+    if (*arg == '!' && *(arg + 1) == '\0')
         return "Invalid argument";
 
     cfg->detection = apr_pstrdup(parms->pool, arg);
