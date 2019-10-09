@@ -535,23 +535,22 @@ static int dosdetector_handler(request_rec *r)
     dosdetector_dir_config *cfg = (dosdetector_dir_config *) ap_get_module_config(r->per_dir_config, &dosdetector_syslog_module);
     dosdetector_server_config *cfgs = (dosdetector_server_config *) ap_get_module_config(r->server->module_config, &dosdetector_syslog_module);
 
+    if (!ap_is_initial_req(r)) {
+        DEBUGLOG("skip processing, this request is sub-request");
+        return DECLINED;
+    }
+    if (!cfg || !cfgs || !cfgs->shm || !cfgs->lock) {
+        DEBUGLOG("skip processing, this module is not ready");
+        return DECLINED;
+    }
+
 #if HTTP_VERSION(AP_SERVER_MAJORVERSION_NUMBER, AP_SERVER_MINORVERSION_NUMBER) >= 2004
     DEBUGLOG("processing from %s [%s]", r->useragent_ip, get_address(r, cfgs->forwarded));
 #else
     DEBUGLOG("processing from %s [%s]", r->connection->remote_ip, get_address(r, cfgs->forwarded));
 #endif
-
     DEBUGLOG("processing path -> `%s' => configured in [%s]", r->finfo.fname ? r->finfo.fname : "(null)", cfg->path ? cfg->path : "(per-server)");
 
-    if (!ap_is_initial_req(r)) {
-        DEBUGLOG("skip processing, this request is sub-request");
-        return DECLINED;
-    }
-
-    if (!cfg || !cfgs || !cfgs->shm || !cfgs->lock) {
-        DEBUGLOG("skip processing, this module is not ready");
-        return DECLINED;
-    }
     if (cfg->illegal_settings) {
         ap_log_error(APLOG_MARK, APLOG_ERR, 0, r->server, LOG_MODULENAME "DoS* is not allowed in `%s'", cfg->path);
         return HTTP_INTERNAL_SERVER_ERROR;
@@ -560,7 +559,6 @@ static int dosdetector_handler(request_rec *r)
         DEBUGLOG("skip processing, `DoSDetection' is not defined or `off'");
         return DECLINED;
     }
-
     if (ap_strcasecmp_match("on", cfg->detection)){
         int rev = (cfg->detection[0] == '!') ? 1 : 0;
         const char *env = apr_table_get(r->subprocess_env, cfg->detection+rev);
